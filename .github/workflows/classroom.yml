@@ -1,0 +1,36 @@
+name: Autograding Tests
+'on': {}
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: [self-hosted, Linux, X64]
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Build riscv-tests
+      run: |
+        git submodule upadte --init --recursive
+        cd riscv-tests/isa
+        make -j
+    - name: riscv-tests unit test
+      id: riscv-tests-unit-test
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: riscv-tests unit test
+        setup-command: |
+          mkdir build && cd build
+          cmake ..
+          make -j
+        command: ctest
+        timeout: 10
+        max-score: 80
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        RISCV-TESTS-UNIT-TEST_RESULTS: "${{steps.riscv-tests-unit-test.outputs.result}}"
+      with:
+        runners: riscv-tests-unit-test
